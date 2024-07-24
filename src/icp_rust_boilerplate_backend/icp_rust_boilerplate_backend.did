@@ -1,0 +1,81 @@
+type Message = variant {
+  Error : text;
+  InvalidPayload : text;
+  NotFound : text;
+  Success : text;
+};
+type Player = record {
+  id : nat64;
+  age : nat32;
+  market_value : nat64;
+  name : text;
+  contract_until : nat64;
+  created_at : nat64;
+  nationality : text;
+  transfer_status : text;
+  current_club : text;
+  position : text;
+};
+type PlayerPayload = record {
+  age : nat32;
+  market_value : nat64;
+  name : text;
+  contract_until : nat64;
+  nationality : text;
+  current_club : text;
+  position : text;
+};
+type Result = variant { Ok : Message; Err : Message };
+type Result_1 = variant { Ok : Player; Err : Message };
+type Result_2 = variant { Ok : Transfer; Err : Message };
+type Result_3 = variant { Ok : TransferBid; Err : Message };
+type Result_4 = variant { Ok : vec Player; Err : Message };
+type Result_5 = variant { Ok : vec TransferBid; Err : Message };
+type Result_6 = variant { Ok : vec Transfer; Err : Message };
+type Transfer = record {
+  id : nat64;
+  player_id : nat64;
+  from_club : text;
+  to_club : text;
+  transfer_fee : nat64;
+  created_at : nat64;
+  contract_duration : nat64;
+  transfer_date : nat64;
+};
+type TransferBid = record {
+  id : nat64;
+  player_id : nat64;
+  from_club : text;
+  to_club : text;
+  created_at : nat64;
+  bid_amount : nat64;
+  bid_status : text;
+};
+type TransferBidPayload = record {
+  player_id : nat64;
+  from_club : text;
+  to_club : text;
+  bid_amount : nat64;
+};
+type TransferPayload = record {
+  player_id : nat64;
+  from_club : text;
+  to_club : text;
+  transfer_fee : nat64;
+  contract_duration : nat64;
+  transfer_date : nat64;
+};
+service : {
+  accept_transfer_bid : (nat64) -> (Result);
+  create_player : (PlayerPayload) -> (Result_1);
+  create_transfer : (TransferPayload) -> (Result_2);
+  create_transfer_bid : (TransferBidPayload) -> (Result_3);
+  get_player_by_id : (nat64) -> (Result_1) query;
+  get_players : () -> (Result_4) query;
+  get_players_by_club : (text) -> (Result_4) query;
+  get_transfer_bid_by_id : (nat64) -> (Result_3) query;
+  get_transfer_bids : () -> (Result_5) query;
+  get_transfer_by_id : (nat64) -> (Result_2) query;
+  get_transfers : () -> (Result_6) query;
+  reject_transfer_bid : (nat64) -> (Result);
+}
