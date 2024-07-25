@@ -65,17 +65,36 @@ type TransferPayload = record {
   contract_duration : nat64;
   transfer_date : nat64;
 };
+type UpdatePlayerPayload = record {
+  age : opt nat32;
+  player_id : nat64;
+  market_value : opt nat64;
+  name : opt text;
+  contract_until : opt nat64;
+  nationality : opt text;
+  current_club : opt text;
+  position : opt text;
+};
+type UpdateTransferBidPayload = record {
+  bid_amount : opt nat64;
+  bid_id : nat64;
+  bid_status : opt text;
+};
 service : {
   accept_transfer_bid : (nat64) -> (Result);
   create_player : (PlayerPayload) -> (Result_1);
   create_transfer : (TransferPayload) -> (Result_2);
   create_transfer_bid : (TransferBidPayload) -> (Result_3);
+  delete_player : (nat64) -> (Result);
   get_player_by_id : (nat64) -> (Result_1) query;
   get_players : () -> (Result_4) query;
   get_players_by_club : (text) -> (Result_4) query;
+  get_players_by_nationality : (text) -> (Result_4) query;
   get_transfer_bid_by_id : (nat64) -> (Result_3) query;
   get_transfer_bids : () -> (Result_5) query;
   get_transfer_by_id : (nat64) -> (Result_2) query;
   get_transfers : () -> (Result_6) query;
   reject_transfer_bid : (nat64) -> (Result);
+  update_player : (UpdatePlayerPayload) -> (Result);
+  update_transfer_bid : (UpdateTransferBidPayload) -> (Result);
 }
