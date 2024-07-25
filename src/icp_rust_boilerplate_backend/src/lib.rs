@@ -129,6 +129,18 @@ struct PlayerPayload {
 }
 
 #[derive(candid::CandidType, Deserialize, Serialize)]
+struct UpdatePlayerPayload {
+    player_id: u64,
+    name: Option<String>,
+    position: Option<String>,
+    current_club: Option<String>,
+    market_value: Option<u64>,
+    contract_until: Option<u64>,
+    age: Option<u32>,
+    nationality: Option<String>,
+}
+
+#[derive(candid::CandidType, Deserialize, Serialize)]
 struct TransferPayload {
     player_id: u64,
     from_club: String,
@@ -144,6 +156,13 @@ struct TransferBidPayload {
     from_club: String,
     to_club: String,
     bid_amount: u64,
+}
+
+#[derive(candid::CandidType, Deserialize, Serialize)]
+struct UpdateTransferBidPayload {
+    bid_id: u64,
+    bid_amount: Option<u64>,
+    bid_status: Option<String>,
 }
 
 #[derive(candid::CandidType, Deserialize, Serialize)]
@@ -190,6 +209,52 @@ fn create_player(payload: PlayerPayload) -> Result<Player, Message> {
     Ok(player)
 }
 
+#[ic_cdk::update]
+fn update_player(payload: UpdatePlayerPayload) -> Result<Message, Message> {
+    PLAYER_STORAGE.with(|storage| {
+        let mut storage = storage.borrow_mut();
+        if let Some(mut player) = storage.remove(&payload.player_id) {
+            if let Some(name) = payload.name {
+                player.name = name;
+            }
+            if let Some(position) = payload.position {
+                player.position = position;
+            }
+            if let Some(current_club) = payload.current_club {
+                player.current_club = current_club;
+            }
+            if let Some(market_value) = payload.market_value {
+                player.market_value = market_value;
+            }
+            if let Some(contract_until) = payload.contract_until {
+                player.contract_until = contract_until;
+            }
+            if let Some(age) = payload.age {
+                player.age = age;
+            }
+            if let Some(nationality) = payload.nationality {
+                player.nationality = nationality;
+            }
+            storage.insert(payload.player_id, player);
+            Ok(Message::Success("Player updated successfully".to_string()))
+        } else {
+            Err(Message::NotFound("Player not found".to_string()))
+        }
+    })
+}
+
+#[ic_cdk::update]
+fn delete_player(player_id: u64) -> Result<Message, Message> {
+    PLAYER_STORAGE.with(|storage| {
+        let mut storage = storage.borrow_mut();
+        if storage.remove(&player_id).is_some() {
+            Ok(Message::Success("Player deleted successfully".to_string()))
+        } else {
+            Err(Message::NotFound("Player not found".to_string()))
+        }
+    })
+}
+
 #[ic_cdk::query]
 fn get_players() -> Result<Vec<Player>, Message> {
     PLAYER_STORAGE.with(|storage| {
@@ -219,7 +284,6 @@ fn get_player_by_id(id: u64) -> Result<Player, Message> {
     })
 }
 
-// Function to retrieve players by their club names
 #[ic_cdk::query]
 fn get_players_by_club(club_name: String) -> Result<Vec<Player>, Message> {
     PLAYER_STORAGE.with(|storage| {
@@ -238,23 +302,38 @@ fn get_players_by_club(club_name: String) -> Result<Vec<Player>, Message> {
     })
 }
 
+#[ic_cdk::query]
+fn get_players_by_nationality(nationality: String) -> Result<Vec<Player>, Message> {
+    PLAYER_STORAGE.with(|storage| {
+        let players: Vec<Player> = storage
+            .borrow()
+            .iter()
+            .filter(|(_, player)| player.nationality == nationality)
+            .map(|(_, player)| player.clone())
+            .collect();
+
+        if players.is_empty() {
+            Err(Message::NotFound("No players found".to_string()))
+        } else {
+            Ok(players)
+        }
+    })
+}
+
 #[ic_cdk::update]
 fn create_transfer(payload: TransferPayload) -> Result<Transfer, Message> {
-    // Validate the payload
     if payload.transfer_fee == 0 || payload.contract_duration == 0 {
         return Err(Message::InvalidPayload(
             "Ensure 'transfer_fee' and 'contract_duration' are provided.".to_string(),
         ));
     }
 
-    // The player should not be transferred to the same club
     if payload.from_club == payload.to_club {
         return Err(Message::Error(
             "Player cannot be transferred to the same club.".to_string(),
         ));
     }
 
-    // The player must exist and must not have been transferred
     let player = PLAYER_STORAGE.with(|storage| {
         storage
             .borrow()
@@ -269,14 +348,12 @@ fn create_transfer(payload: TransferPayload) -> Result<Transfer, Message> {
 
     let player = player.unwrap();
 
-    // Ensure the player is available for transfer and is a member of the from_club
     if player.transfer_status != "available" || player.current_club != payload.from_club {
         return Err(Message::Error(
             "Player is not available for transfer or is not a member of the from_club.".to_string(),
         ));
     }
 
-    // The player must not have been transferred
     if player.transfer_status == "transferred" {
         return Err(Message::Error(
             "Player has already been transferred.".to_string(),
@@ -303,7 +380,6 @@ fn create_transfer(payload: TransferPayload) -> Result<Transfer, Message> {
 
     TRANSFER_STORAGE.with(|storage| storage.borrow_mut().insert(id, transfer.clone()));
 
-    // Update player status to transferred and update current club and contract until
     let mut updated_player = player.clone();
     updated_player.transfer_status = "transferred".to_string();
     updated_player.current_club = payload.to_club.clone();
@@ -383,6 +459,25 @@ fn create_transfer_bid(payload: TransferBidPayload) -> Result<TransferBid, Messa
     Ok(bid)
 }
 
+#[ic_cdk::update]
+fn update_transfer_bid(payload: UpdateTransferBidPayload) -> Result<Message, Message> {
+    TRANSFER_BID_STORAGE.with(|storage| {
+        let mut storage = storage.borrow_mut();
+        if let Some(mut bid) = storage.remove(&payload.bid_id) {
+            if let Some(bid_amount) = payload.bid_amount {
+                bid.bid_amount = bid_amount;
+            }
+            if let Some(bid_status) = payload.bid_status {
+                bid.bid_status = bid_status;
+            }
+            storage.insert(payload.bid_id, bid);
+            Ok(Message::Success("Transfer bid updated successfully".to_string()))
+        } else {
+            Err(Message::NotFound("Transfer bid not found".to_string()))
+        }
+    })
+}
+
 #[ic_cdk::query]
 fn get_transfer_bids() -> Result<Vec<TransferBid>, Message> {
     TRANSFER_BID_STORAGE.with(|storage| {
@@ -448,11 +543,9 @@ fn accept_transfer_bid(id: u64) -> Result<Message, Message> {
 
     let player = player.unwrap();
 
-    // Update bid status to accepted
     bid.bid_status = "accepted".to_string();
     TRANSFER_BID_STORAGE.with(|storage| storage.borrow_mut().insert(id, bid.clone()));
 
-    // Create transfer
     let transfer_id = ID_COUNTER
         .with(|counter| {
             let current_value = *counter.borrow().get();
@@ -473,7 +566,6 @@ fn accept_transfer_bid(id: u64) -> Result<Message, Message> {
 
     TRANSFER_STORAGE.with(|storage| storage.borrow_mut().insert(transfer_id, transfer.clone()));
 
-    // Update player status to transferred and update current club and contract until
     let mut updated_player = player.clone();
     updated_player.transfer_status = "transferred".to_string();
     updated_player.current_club = bid.to_club.clone();
@@ -507,7 +599,6 @@ fn reject_transfer_bid(id: u64) -> Result<Message, Message> {
         ));
     }
     
-    // Update bid status to rejected
     bid.bid_status = "rejected".to_string();
     TRANSFER_BID_STORAGE.with(|storage| storage.borrow_mut().insert(id, bid.clone()));
 
