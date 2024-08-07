@@ -1,7 +1,9 @@
 type Message = variant {
   Error : text;
+  PlayerUnavailable : text;
   InvalidPayload : text;
   NotFound : text;
+  BidInvalid : text;
   Success : text;
 };
 type Player = record {
@@ -70,6 +72,7 @@ service : {
   create_player : (PlayerPayload) -> (Result_1);
   create_transfer : (TransferPayload) -> (Result_2);
   create_transfer_bid : (TransferBidPayload) -> (Result_3);
+  delete_player : (nat64) -> (Result);
   get_player_by_id : (nat64) -> (Result_1) query;
   get_players : () -> (Result_4) query;
   get_players_by_club : (text) -> (Result_4) query;
@@ -78,4 +81,5 @@ service : {
   get_transfer_by_id : (nat64) -> (Result_2) query;
   get_transfers : () -> (Result_6) query;
   reject_transfer_bid : (nat64) -> (Result);
+  update_player : (nat64, PlayerPayload) -> (Result_1);
 }
